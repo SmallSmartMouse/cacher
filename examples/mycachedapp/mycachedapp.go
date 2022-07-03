@@ -15,12 +15,12 @@ type myStruct struct {
 
 func main() {
 	// Accessing a new cache table for the first time will create it.
-	cache := cacher.Cache("myCache")
+	cache := cacher.New("myCache", 5*time.Second)
 
 	// We will put a new item in the cache. It will expire after
 	// not being accessed via Get(key) for more than 5 seconds.
 	val := myStruct{"This is a test!", []byte{}}
-	cache.Add("someKey", 5*time.Second, &val)
+	cache.Set("someKey", 5*time.Second, &val)
 
 	// Let's retrieve the item from the cache.
 	res, err := cache.Get("someKey")
@@ -37,8 +37,8 @@ func main() {
 		fmt.Println("Item is not cached (anymore).")
 	}
 
-	// Add another item that never expires.
-	cache.Add("someKey", 0, &val)
+	// Set another item that never expires.
+	cache.Set("someKey", 0, &val)
 
 	// cacher supports a few handy callbacks and loading mechanisms.
 	cache.SetAboutToDeleteItemCallback(func(e *cacher.CacheItem) {

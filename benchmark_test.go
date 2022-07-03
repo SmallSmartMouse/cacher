@@ -22,7 +22,7 @@ func BenchmarkNotFoundAdd(b *testing.B) {
 
 	fn := func(id int) {
 		for i := 0; i < b.N; i++ {
-			if table.NotFoundAdd(i, 0, i+id) {
+			if table.Add(i, 0, i+id) {
 				atomic.AddInt32(&added, 1)
 			} else {
 				atomic.AddInt32(&idle, 1)

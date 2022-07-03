@@ -69,15 +69,6 @@ func (table *CacheTable) SetDataLoader(f func(k interface{}) (interface{}, error
 	table.loadData = f
 }
 
-//// SetDataLoader configures a data-loader callback, which will be called when
-//// trying to access a non-existing key. The key and 0...n additional arguments
-//// are passed to the callback function.
-//func (table *CacheTable) SetDataLoader(f func(interface{}, ...interface{}) *CacheItem) {
-//	table.Lock()
-//	defer table.Unlock()
-//	table.loadData = f
-//}
-
 // SetAddedItemCallback configures a callback, which will be called every time
 // a new item is added to the cache.
 func (table *CacheTable) SetAddedItemCallback(f func(*CacheItem)) {
@@ -206,15 +197,15 @@ func (table *CacheTable) addInternal(item *CacheItem) {
 	}
 }
 
-// Add adds a key/value pair to the cache.
+// Set adds a key/value pair to the cache.
 // Parameter key is the item's cache-key.
 // Parameter lifeSpan determines after which time period without an access the item
 // will get removed from the cache.
 // Parameter data is the item's value.
-func (table *CacheTable) Add(key interface{}, lifeSpan time.Duration, data interface{}) *CacheItem {
+func (table *CacheTable) Set(key interface{}, lifeSpan time.Duration, data interface{}) *CacheItem {
 	item := NewCacheItem(key, lifeSpan, data)
 
-	// Add item to cache.
+	// Set item to cache.
 	table.Lock()
 	table.addInternal(item)
 
@@ -272,9 +263,9 @@ func (table *CacheTable) Exists(key interface{}) bool {
 	return ok
 }
 
-// NotFoundAdd checks whether an item is not yet cached. Unlike the Exists
+// Add checks whether an item is not yet cached. Unlike the Exists
 // method this also adds data if the key could not be found.
-func (table *CacheTable) NotFoundAdd(key interface{}, lifeSpan time.Duration, data interface{}) bool {
+func (table *CacheTable) Add(key interface{}, lifeSpan time.Duration, data interface{}) bool {
 	table.Lock()
 
 	if _, ok := table.items[key]; ok {
@@ -314,7 +305,7 @@ func (table *CacheTable) Get(key interface{}) (*CacheItem, error) {
 		if err != nil && !table.enableNullData {
 			return nil, ErrKeyNotFoundOrLoadable
 		}
-		iterm := table.Add(key, table.defaultExpiration, data)
+		iterm := table.Set(key, table.defaultExpiration, data)
 		return iterm, nil
 	}
 	return nil, ErrKeyNotFound

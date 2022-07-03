@@ -4,21 +4,20 @@ import (
 	"fmt"
 	"github.com/SmallSmartMouse/cacher/cacher"
 	"strconv"
+	"time"
 )
 
 func main() {
-	cache := cacher.Cache("myCache")
+	cache := cacher.New("myCache", 5*time.Second)
 
 	// The data loader gets called automatically whenever something
 	// tries to retrieve a non-existing key from the cache.
-	cache.SetDataLoader(func(key interface{}, args ...interface{}) *cacher.CacheItem {
+	cache.SetDataLoader(func(key interface{}) (interface{}, error) {
 		// Apply some clever loading logic here, e.g. read values for
 		// this key from database, network or file.
 		val := "This is a test with key " + key.(string)
 
-		// This helper method creates the cached item for us. Yay!
-		item := cacher.NewCacheItem(key, 0, val)
-		return item
+		return val, nil
 	})
 
 	// Let's retrieve a few auto-generated items from the cache.

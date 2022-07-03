@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	cache := cacher.Cache("myCache")
+	cache := cacher.New("myCache",1)
 
 	// This callback will be triggered every time a new item
 	// gets added to the cache.
@@ -25,7 +25,7 @@ func main() {
 	})
 
 	// Caching a new item will execute the AddedItem callback.
-	cache.Add("someKey", 0, "This is a test!")
+	cache.Set("someKey", 0, "This is a test!")
 
 	// Let's retrieve the item from the cache
 	res, err := cache.Get("someKey")
@@ -40,7 +40,7 @@ func main() {
 
 	cache.RemoveAddedItemCallbacks()
 	// Caching a new item that expires in 3 seconds
-	res = cache.Add("anotherKey", 3*time.Second, "This is another test")
+	res = cache.Set("anotherKey", 3*time.Second, "This is another test")
 
 	// This callback will be triggered when the item is about to expire
 	res.SetAboutToExpireCallback(func(key interface{}) {
