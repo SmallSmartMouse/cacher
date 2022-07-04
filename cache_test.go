@@ -8,6 +8,8 @@ package cacher
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"log"
 	"strconv"
 	"sync"
@@ -21,10 +23,10 @@ var (
 	v = "testvalue"
 )
 
-func TestCache(t *testing.T) {
+func TestNew(t *testing.T) {
 	// add an expiring item after a non-expiring one to
 	// trigger expirationCheck iterating over non-expiring items
-	table := Cache("testCache")
+	table := New("testCache", time.Second)
 	table.Set(k+"_1", 0*time.Second, v)
 	table.Set(k+"_2", 1*time.Second, v)
 
@@ -54,12 +56,12 @@ func TestCache(t *testing.T) {
 }
 
 func TestCacheExpire(t *testing.T) {
-	table := Cache("testCache")
+	table := New("testCache", time.Millisecond)
 
-	table.Set(k+"_1", 250*time.Millisecond, v+"_1")
-	table.Set(k+"_2", 200*time.Millisecond, v+"_2")
+	table.Set(k+"_1", 10*time.Millisecond, v+"_1")
+	table.Set(k+"_2", 30*time.Millisecond, v+"_2")
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(5 * time.Millisecond)
 
 	// check key `1` is still alive
 	_, err := table.Get(k + "_1")
@@ -67,24 +69,24 @@ func TestCacheExpire(t *testing.T) {
 		t.Error("Error retrieving value from cache:", err)
 	}
 
-	time.Sleep(150 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	// check key `1` again, it should still be alive since we just accessed it
 	_, err = table.Get(k + "_1")
-	if err != nil {
+	if err == nil {
 		t.Error("Error retrieving value from cache:", err)
 	}
 
 	// check key `2`, it should have been removed by now
 	_, err = table.Get(k + "_2")
-	if err == nil {
+	if err != nil {
 		t.Error("Found key which should have been expired by now")
 	}
 }
 
 func TestExists(t *testing.T) {
 	// add an expiring item
-	table := Cache("testExists")
+	table := New("testExists", time.Second)
 	table.Set(k, 0, v)
 	// check if it exists
 	if !table.Exists(k) {
@@ -93,7 +95,7 @@ func TestExists(t *testing.T) {
 }
 
 func TestNotFoundAdd(t *testing.T) {
-	table := Cache("testNotFoundAdd")
+	table := New("testNotFoundAdd", time.Second)
 
 	if !table.Add(k, 0, v) {
 		t.Error("Error verifying Add, data not in cache")
@@ -105,7 +107,7 @@ func TestNotFoundAdd(t *testing.T) {
 }
 
 func TestNotFoundAddConcurrency(t *testing.T) {
-	table := Cache("testNotFoundAdd")
+	table := New("testNotFoundAdd", time.Second)
 
 	var finish sync.WaitGroup
 	var added int32
@@ -147,7 +149,7 @@ func TestNotFoundAddConcurrency(t *testing.T) {
 
 func TestCacheKeepAlive(t *testing.T) {
 	// add an expiring item
-	table := Cache("testKeepAlive")
+	table := New("testKeepAlive", time.Millisecond)
 	p := table.Set(k, 250*time.Millisecond, v)
 
 	// keep it alive before it expires
@@ -169,7 +171,7 @@ func TestCacheKeepAlive(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	// add an item to the cache
-	table := Cache("testDelete")
+	table := New("testDelete", time.Second)
 	table.Set(k, 0, v)
 	// check it's really cached
 	p, err := table.Get(k)
@@ -193,7 +195,7 @@ func TestDelete(t *testing.T) {
 
 func TestFlush(t *testing.T) {
 	// add an item to the cache
-	table := Cache("testFlush")
+	table := New("testFlush", time.Second)
 	table.Set(k, 10*time.Second, v)
 	// flush the entire table
 	table.Flush()
@@ -211,7 +213,7 @@ func TestFlush(t *testing.T) {
 
 func TestCount(t *testing.T) {
 	// add a huge amount of items to the cache
-	table := Cache("testCount")
+	table := New("testCount", time.Second)
 	count := 100000
 	for i := 0; i < count; i++ {
 		key := k + strconv.Itoa(i)
@@ -233,39 +235,47 @@ func TestCount(t *testing.T) {
 
 func TestDataLoader(t *testing.T) {
 	// setup a cache with a configured data-loader
-	table := Cache("testDataLoader")
-	table.SetDataLoader(func(key interface{}) (interface{}, error) {
-		var item *CacheItem
-		if key.(string) != "nil" {
-			val := k + key.(string)
-			i := NewCacheItem(key, 500*time.Millisecond, val)
-			item = i
+	table := New("testDataLoader", time.Millisecond)
+	count := 0
+	table.EnableNullData(true)
+	table.SetDataLoader(func(key interface{}) (interface{}, time.Duration,error) {
+		if key.(string) == "nil" {
+			return nil,0, errors.New("not found")
 		}
-
-		return item, nil
+		count++
+		fmt.Println(key,count)
+		return strconv.Itoa(count), 20*time.Millisecond, nil
 	})
 
-	// make sure data-loader works as expected and handles unloadable keys
-	_, err := table.Get("nil")
-	if err == nil || table.Exists("nil") {
-		t.Error("Error validating data loader for nil values")
+	//// make sure data-loader works as expected and handles unloadable keys
+	//_, err := table.Get("nil")
+	//if err != nil || !table.Exists("nil") {
+	//	t.Error("Error validating data loader for nil values")
+	//}
+	key := k + "a"
+	val := k + "v"
+	table.Set(key, time.Millisecond*20, val)
+	time.Sleep(time.Millisecond * 10)
+	p, err := table.Get(key)
+	if err != nil || p.Data() != val {
+		t.Error("Error flushing table")
+	}
+	time.Sleep(time.Millisecond * 20)
+	p, err = table.Get(key)
+	if err != nil || p.Data() != "1" {
+		t.Error("Error flushing table")
+	}
+	time.Sleep(time.Millisecond * 60)
+	if table.Exists(key) {
+		t.Error("Error validating data expired key")
 	}
 
-	// retrieve a bunch of items via the data-loader
-	for i := 0; i < 10; i++ {
-		key := k + strconv.Itoa(i)
-		vp := k + key
-		p, err := table.Get(key)
-		if err != nil || p == nil || p.Data().(string) != vp {
-			t.Error("Error validating data loader")
-		}
-	}
 }
 
 func TestAccessCount(t *testing.T) {
 	// add 100 items to the cache
 	count := 100
-	table := Cache("testAccessCount")
+	table := New("testAccessCount", time.Second)
 	for i := 0; i < count; i++ {
 		table.Set(i, 10*time.Second, v)
 	}
@@ -302,7 +312,7 @@ func TestCallbacks(t *testing.T) {
 	calledExpired := false
 
 	// setup a cache with AddedItem & SetAboutToDelete handlers configured
-	table := Cache("testCallbacks")
+	table := New("testCallbacks", time.Second)
 	table.SetAddedItemCallback(func(item *CacheItem) {
 		m.Lock()
 		addedKey = item.Key().(string)
@@ -369,7 +379,7 @@ func TestCallbackQueue(t *testing.T) {
 	expired := false
 	calledExpired := false
 	// setup a cache with AddedItem & SetAboutToDelete handlers configured
-	table := Cache("testCallbacks")
+	table := New("testCallbacks", time.Second)
 
 	// test callback queue
 	table.AddAddedItemCallback(func(item *CacheItem) {
@@ -460,7 +470,7 @@ func TestLogger(t *testing.T) {
 	l := log.New(out, "cacher ", log.Ldate|log.Ltime)
 
 	// setup a cache with this logger
-	table := Cache("testLogger")
+	table := New("testLogger", time.Second)
 	table.SetLogger(l)
 	table.Set(k, 0, v)
 
