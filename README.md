@@ -8,14 +8,14 @@ Concurrency-safe golang caching library with expiration capabilities.
 
 To install cacher, simply run:
 
-    go get github.com/SmallSmartMouse/cacher/cacher
+    go get github.com/SmallSmartMouse/cacher
 
 ## Example
 ```go
 package main
 
 import (
-	"github.com/SmallSmartMouse/cacher/cacher"
+	"github.com/SmallSmartMouse/cacher"
 	"fmt"
 	"time"
 )

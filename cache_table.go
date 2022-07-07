@@ -7,7 +7,7 @@
 package cacher
 
 import (
-	"github.com/SmallSmartMouse/cacher/cacher/singleflight"
+	"github.com/SmallSmartMouse/cacher/singleflight"
 	"log"
 	"sort"
 	"sync"
