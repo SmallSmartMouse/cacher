@@ -159,7 +159,7 @@ func (table *CacheTable) ExpirationCheck() {
 		if now.Sub(createdOn) >= lifeSpan {
 			if table.enableAutoLoad {
 				if now.Sub(accessedOn) <= lifeSpan*2/3 {
- 					temp, tempLifeSpan, err1 := table.loadData(key)
+					temp, tempLifeSpan, err1 := table.loadData(key)
 					if err1 == nil {
 						table.addInternal(NewCacheItem(key, tempLifeSpan, temp))
 						continue
@@ -288,17 +288,19 @@ func (table *CacheTable) Get(key interface{}) (*CacheItem, error) {
 	if loadData != nil {
 		data, err, _ := table.singleSetCache.Do(key, func() (interface{}, error) {
 			temp, tempLifeSpan, err1 := loadData(key)
-			if err1 != nil {
+			if err1 != nil && !table.enableNullData {
 				return nil, err1
 			}
+
 			item := NewCacheItem(key, tempLifeSpan, temp)
 			table.Lock()
 			table.addInternal(item)
 			table.Unlock()
 			return item, nil
 		})
-		if err != nil && !table.enableNullData {
-			return nil, ErrKeyNotFoundOrLoadable
+
+		if err != nil {
+			return nil, err
 		}
 		return data.(*CacheItem), nil
 	}

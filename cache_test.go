@@ -247,11 +247,21 @@ func TestDataLoader(t *testing.T) {
 		return strconv.Itoa(count), 20*time.Millisecond, nil
 	})
 
-	//// make sure data-loader works as expected and handles unloadable keys
-	//_, err := table.Get("nil")
-	//if err != nil || !table.Exists("nil") {
-	//	t.Error("Error validating data loader for nil values")
-	//}
+	// make sure data-loader works as expected and handles unloadable keys
+	v, err := table.Get("nil")
+	if err != nil || !table.Exists("nil") {
+		t.Error("Error validating data loader for nil values")
+	}
+	if v.Data() != nil   {
+		t.Error("Error validating data loader for nil values")
+	}
+	v, err  = table.Get("nil")
+	if err != nil || !table.Exists("nil") {
+		t.Error("Error validating data loader for nil values")
+	}
+	if v.Data() != nil   {
+		t.Error("Error validating data loader for nil values")
+	}
 	key := k + "a"
 	val := k + "v"
 	table.Set(key, time.Millisecond*20, val)
