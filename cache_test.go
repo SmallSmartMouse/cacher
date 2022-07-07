@@ -56,7 +56,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestCacheExpire(t *testing.T) {
-	table := New("testCache", time.Millisecond)
+	table := New("testCacheE", time.Millisecond)
 
 	table.Set(k+"_1", 10*time.Millisecond, v+"_1")
 	table.Set(k+"_2", 30*time.Millisecond, v+"_2")
@@ -265,6 +265,13 @@ func TestDataLoader(t *testing.T) {
 	if err != nil || p.Data() != "1" {
 		t.Error("Error flushing table")
 	}
+
+	time.Sleep(time.Millisecond * 15)
+	p, err = table.Get(key)
+	if err != nil || p.Data() != "2" {
+		t.Error("Error flushing table")
+	}
+
 	time.Sleep(time.Millisecond * 60)
 	if table.Exists(key) {
 		t.Error("Error validating data expired key")

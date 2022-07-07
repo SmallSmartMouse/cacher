@@ -5,18 +5,10 @@ Concurrency-safe golang caching library with expiration capabilities.
 
 ## Installation
 
-Make sure you have a working Go environment (Go 1.2 or higher is required).
-See the [install instructions](https://golang.org/doc/install.html).
 
 To install cacher, simply run:
 
     go get github.com/SmallSmartMouse/cacher/cacher
-
-To compile it from source:
-
-    cd $GOPATH/src/github.com/SmallSmartMouse/cacher/cacher
-    go get -u -v
-    go build && go test -v
 
 ## Example
 ```go
@@ -73,8 +65,4 @@ func main() {
 	cache.Flush()
 }
 ```
-
-To run this example, go to examples/mycachedapp/ and run:
-
-    go run mycachedapp.go
 
